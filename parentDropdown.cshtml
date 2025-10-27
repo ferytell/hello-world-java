@@ -1,0 +1,32 @@
+@model object
+@(Html.Kendo().DropDownListFor(m => m)
+    .DataValueField("Id")
+    .DataTextField("Name")
+    .AutoBind(false)
+    .DataSource(source =>
+    {
+        source.Read(read =>
+        {
+            read.Action("GetParents", "Grid");
+        });
+    })
+    .Events(e => e.Change("onParentChange"))
+)
+
+<script>
+    function onParentChange() {
+        var row = this.wrapper.closest("tr");
+        var grid = $("#grid").data("kendoGrid");
+        var dataItem = grid.dataItem(row);
+        
+        // Clear child dropdown
+        dataItem.set("ChildId", null);
+        
+        // Find and update child dropdown
+        var childDropdown = row.find("[data-role=dropdownlist]").eq(1).data("kendoDropDownList");
+        if (childDropdown) {
+            childDropdown.dataSource.read({ parentId: this.value() });
+            childDropdown.value("");
+        }
+    }
+</script>

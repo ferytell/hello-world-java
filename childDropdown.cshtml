@@ -1,0 +1,28 @@
+@model object
+@(Html.Kendo().DropDownListFor(m => m)
+    .DataValueField("Id")
+    .DataTextField("Name")
+    .AutoBind(false)
+    .CascadeFrom("ParentId")
+    .DataSource(source =>
+    {
+        source.Read(read =>
+        {
+            read.Action("GetChildren", "Grid")
+                .Data("getParentId");
+        });
+    })
+)
+
+<script>
+    function getParentId() {
+        var row = $("#grid").data("kendoGrid").tbody.find("tr[data-uid]").filter(function() {
+            return $(this).find("input[name='ChildId']").length > 0;
+        }).first();
+        
+        var dataItem = $("#grid").data("kendoGrid").dataItem(row);
+        return {
+            parentId: dataItem ? dataItem.ParentId : 0
+        };
+    }
+</script>

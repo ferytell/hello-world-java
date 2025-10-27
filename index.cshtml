@@ -1,0 +1,104 @@
+@using Kendo.Mvc.UI
+
+<div id="grid"></div>
+
+<script>
+    function parentDropdownEditor(container, options) {
+        $('<input required name="' + options.field + '"/>')
+            .appendTo(container)
+            .kendoDropDownList({
+                autoBind: false,
+                dataTextField: "Name",
+                dataValueField: "Id",
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Url.Action("GetParents", "Grid")",
+                            type: "GET"
+                        }
+                    }
+                },
+                change: function() {
+                    var row = this.wrapper.closest("tr");
+                    var grid = $("#grid").data("kendoGrid");
+                    var dataItem = grid.dataItem(row);
+                    
+                    // Clear child dropdown when parent changes
+                    dataItem.set("ChildId", null);
+                    
+                    // Trigger cascade
+                    var childDropdown = row.find("[data-role=dropdownlist]").eq(1).data("kendoDropDownList");
+                    if (childDropdown) {
+                        childDropdown.dataSource.read({ parentId: this.value() });
+                        childDropdown.value("");
+                    }
+                }
+            });
+    }
+
+    function childDropdownEditor(container, options) {
+        $('<input name="' + options.field + '"/>')
+            .appendTo(container)
+            .kendoDropDownList({
+                autoBind: false,
+                cascadeFrom: "ParentId",
+                dataTextField: "Name",
+                dataValueField: "Id",
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Url.Action("GetChildren", "Grid")",
+                            type: "GET",
+                            data: function() {
+                                var row = container.closest("tr");
+                                var grid = $("#grid").data("kendoGrid");
+                                var dataItem = grid.dataItem(row);
+                                return {
+                                    parentId: dataItem.ParentId
+                                };
+                            }
+                        }
+                    }
+                }
+            });
+    }
+</script>
+
+@(Html.Kendo().Grid<GridModel>()
+    .Name("grid")
+    .Columns(columns =>
+    {
+        columns.Bound(p => p.ParentId).Title("Parent").EditorTemplateName("ParentDropdown");
+        columns.Bound(p => p.ChildId).Title("Child").EditorTemplateName("ChildDropdown");
+        columns.Bound(p => p.Data3).Title("Data 3");
+        columns.Command(command => command.Destroy()).Width(150);
+    })
+    .ToolBar(toolbar => {
+        toolbar.Create();
+        toolbar.Save();
+    })
+    .Editable(editable => editable.Mode(GridEditMode.InCell))
+    .Pageable()
+    .Navigatable()
+    .Sortable()
+    .Scrollable()
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Batch(true)
+        .PageSize(10)
+        .ServerOperation(false)
+        .Events(events => events.Error("error_handler"))
+        .Model(model =>
+        {
+            model.Id(p => p.Id);
+            model.Field(p => p.Id).Editable(false);
+            model.Field(p => p.ParentId);
+            model.Field(p => p.ChildId);
+            model.Field(p => p.Data3);
+        })
+        .Read(read => read.Action("GetGridData", "Grid"))
+        .Create(create => create.Action("Create", "Grid"))
+        .Update(update => update.Action("Update", "Grid"))
+        .Destroy(destroy => destroy.Action("Destroy", "Grid"))
+    )
+)
